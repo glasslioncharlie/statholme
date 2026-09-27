@@ -1,0 +1,27 @@
+## Interface: 16001, 120100
+## Title: Statholme
+## Notes: Lightweight datatext bars for the default UI, with clickable readouts.
+## Version: 0.1.0
+## X-License: GPL-3.0-or-later
+## SavedVariables: StatholmeDB
+## SavedVariablesPerCharacter: StatholmeCharDB
+
+Format.lua
+Core.lua
+Readouts\Time.lua
+Readouts\FPS.lua
+Readouts\Ping.lua
+Readouts\Friends.lua
+Readouts\Guild.lua
+Readouts\Mail.lua
+Readouts\Bags.lua
+Readouts\Durability.lua
+Readouts\Gold.lua
+Readouts\Location.lua
+Readouts\Spec.lua
+Readouts\Memory.lua
+Readouts\ItemLevel.lua
+Bar.lua
+Spots.lua
+Menu.lua
+Options.lua

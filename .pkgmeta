@@ -1,0 +1,8 @@
+package-as: Statholme
+
+manual-changelog:
+  filename: RELEASE_NOTES.md
+  markup-type: markdown
+
+ignore:
+  - tests
