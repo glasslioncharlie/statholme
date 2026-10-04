@@ -1,6 +1,5 @@
 local _, addon = ...
 
-local MAX_WINDOWS = Constants.ChatFrameConstants.MaxChatWindows
 local ROW_HEIGHT = 30
 local DROPDOWN_WIDTH = 130
 local ROW_WIDTH = 560
@@ -63,7 +62,10 @@ local function createRow(parent, spot, side, count)
 end
 
 local sections = {}
-local function addSection(spot, count)
+-- Made on first show: the saved settings are loaded by then, and chat addons can open any number of windows.
+local function sectionFor(spot)
+  if sections[spot] then return sections[spot] end
+  local count = addon.SLOT_COUNTS[spot] or addon.SLOT_COUNTS.window
   local section = CreateFrame("Frame", nil, content)
   section:SetSize(ROW_WIDTH, 20 + ROW_HEIGHT * 2)
   section.header = section:CreateFontString(nil, "ARTWORK", "GameFontNormal")
@@ -72,15 +74,8 @@ local function addSection(spot, count)
   section.rows[1]:SetPoint("TOPLEFT", 0, -20)
   section.rows[2]:SetPoint("TOPLEFT", section.rows[1], "BOTTOMLEFT")
   sections[spot] = section
+  return section
 end
-
--- Dropdowns read the saved settings as soon as they're set up.
-addon.OnLoad(function()
-  addSection("minimap", addon.SLOT_COUNTS.minimap)
-  addSection("chat", addon.SLOT_COUNTS.chat)
-  addSection("micro", addon.SLOT_COUNTS.micro)
-  for index = 2, MAX_WINDOWS do addSection(index, addon.SLOT_COUNTS.window) end
-end)
 
 local timeSection = CreateFrame("Frame", nil, content)
 timeSection:SetSize(ROW_WIDTH, 80)
@@ -106,7 +101,7 @@ local function refresh()
   for _, index in ipairs(addon.OpenWindows()) do table.insert(order, index) end
   local y = -56
   for _, spot in ipairs(order) do
-    local section = sections[spot]
+    local section = sectionFor(spot)
     section.header:SetText(addon.SpotName(spot))
     for _, row in ipairs(section.rows) do
       row.check:SetChecked(addon.GetBar(spot, row.side).shown)

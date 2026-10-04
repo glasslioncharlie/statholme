@@ -53,13 +53,23 @@ StatholmeDB = {
   },
   time = { twentyFour = true },
   currencies = { [1792] = true },
-}
-StatholmeCharDB = {
-  chat = {
-    [3] = { top = { shown = true, slots = { "gold" } } },
-    bogus = {},
+  windows = {
+    Guild = { top = { shown = true, slots = { "gold" } } },
+    [5] = {},
+    Broken = "yes",
   },
 }
+-- 0.1.0 saved window bars per character, by Blizzard window number.
+StatholmeCharDB = {
+  chat = {
+    [3] = { top = { shown = true, slots = { "bags", "bogus" } } },
+    [4] = { bottom = { shown = true, slots = { "fps" } } },
+  },
+}
+local spotNames = { [2] = "Guild", [3] = "LFG", [4] = "Trade", [5] = "Whispers", [6] = "Guild" }
+addon.SpotName = function(spot) return spotNames[spot] end
+local blizzardNames = { [3] = "LFG", [4] = "Guild" }
+addon.chatHosts.blizzard = { WindowName = function(index) return blizzardNames[index] end }
 coreFrame.onEvent(coreFrame, "ADDON_LOADED", "Statholme")
 check("load listeners run", loaded, 1)
 
@@ -72,12 +82,26 @@ check("valid setting kept", addon.GetBar("micro", "top").shown, true)
 check("saved time option kept", addon.db.time.twentyFour, true)
 check("missing time option filled", addon.db.time.server, false)
 check("currencies kept", addon.db.currencies[1792], true)
-check("window bar kept", addon.GetBar(3, "top").shown, true)
-check("short window slot list padded", slotsOf(3, "top"), "gold,none,none")
-check("missing window bar filled", addon.GetBar(3, "bottom").shown, false)
-check("non-numbered window dropped", StatholmeCharDB.chat.bogus, nil)
-check("new window starts off", addon.GetBar(4, "bottom").shown, false)
-check("new window starts empty", slotsOf(4, "top"), "none,none,none")
+
+check("window bar found by name", addon.GetBar(2, "top").shown, true)
+check("short window slot list padded", slotsOf(2, "top"), "gold,none,none")
+check("missing window bar filled", addon.GetBar(2, "bottom").shown, false)
+check("unnamed saved window dropped", StatholmeDB.windows[5], nil)
+check("broken saved window reset", StatholmeDB.windows.Broken.top.shown, false)
+check("windows with the same name share settings", addon.GetBar(6, "top").shown, true)
+check("account setting wins over an old character one", addon.GetBar(2, "bottom").shown, false)
+
+check("old character window carried over by name", addon.GetBar(3, "top").shown, true)
+check("carried-over slots cleaned", slotsOf(3, "top"), "bags,none,none")
+check("carried-over window saved for the account", StatholmeDB.windows.LFG.top.shown, true)
+check("carried-over window removed from the character", StatholmeCharDB.chat[3], nil)
+check("old windows matched by name, not number", addon.GetBar(4, "bottom").shown, false)
+check("new window starts off", addon.GetBar(5, "bottom").shown, false)
+check("new window starts empty", slotsOf(5, "top"), "none,none,none")
+
+addon.SetBarShown(9, "top", true)
+check("window without a name isn't saved", StatholmeDB.windows[""], nil)
+check("window without a name gets defaults", addon.GetBar(9, "top").shown, false)
 
 StatholmeDB, StatholmeCharDB = nil, nil
 coreFrame.onEvent(coreFrame, "ADDON_LOADED", "Statholme")

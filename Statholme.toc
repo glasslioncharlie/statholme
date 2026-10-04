@@ -1,10 +1,11 @@
 ## Interface: 16001, 120100
 ## Title: Statholme
-## Notes: Lightweight datatext bars for the default UI, with clickable readouts.
-## Version: 0.1.0
+## Notes: Lightweight datatext bars for the default UI and Chattynator, with clickable readouts.
+## Version: 0.2.0
 ## X-License: GPL-3.0-or-later
 ## SavedVariables: StatholmeDB
 ## SavedVariablesPerCharacter: StatholmeCharDB
+## OptionalDeps: Chattynator
 
 Format.lua
 Core.lua
@@ -22,6 +23,8 @@ Readouts\Spec.lua
 Readouts\Memory.lua
 Readouts\ItemLevel.lua
 Bar.lua
+Chat\Blizzard.lua
+Chat\Chattynator.lua
 Spots.lua
 Menu.lua
 Options.lua

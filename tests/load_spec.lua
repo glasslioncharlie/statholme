@@ -28,6 +28,8 @@ CreateFrame = function(frameType)
   return frame
 end
 Constants = { ChatFrameConstants = { MaxChatWindows = 10 } }
+C_AddOns = stub()
+rawset(C_AddOns, "IsAddOnLoaded", function() return false end)
 SlashCmdList = {}
 
 local unset = { StatholmeDB = true, StatholmeCharDB = true }

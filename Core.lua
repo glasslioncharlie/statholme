@@ -5,6 +5,7 @@ addon.READOUT_ORDER = {
   "durability", "gold", "location", "spec", "memory", "itemlevel",
 }
 addon.SLOT_COUNTS = { minimap = 2, chat = 3, micro = 3, window = 3 }
+addon.chatHosts = {}
 
 local known = { none = true }
 for _, id in ipairs(addon.READOUT_ORDER) do known[id] = true end
@@ -27,6 +28,7 @@ local DEFAULTS = {
   },
   time = { server = false, twentyFour = false },
   currencies = {},
+  windows = {},
 }
 local WINDOW_DEFAULT = { top = bar(false, none(3)), bottom = bar(false, none(3)) }
 
@@ -69,16 +71,31 @@ function addon.OnBarChanged(listener)
   table.insert(barListeners, listener)
 end
 
-function addon.GetBar(spot, side)
-  if type(spot) == "number" then
-    local window = addon.charDB.chat[spot]
-    if not window then
-      window = copy(WINDOW_DEFAULT)
-      addon.charDB.chat[spot] = window
+-- 0.1.0 saved window bars per character, by Blizzard window number. Window names aren't
+-- reliably known at load, so each moves to its name when a window by that name first shows up.
+local function oldWindow(name)
+  local old = StatholmeCharDB and StatholmeCharDB.chat
+  if type(old) ~= "table" then return nil end
+  for index, window in pairs(old) do
+    if type(index) == "number" and addon.chatHosts.blizzard.WindowName(index) == name then
+      old[index] = nil
+      if not next(old) then StatholmeCharDB = nil end
+      return clean(window, WINDOW_DEFAULT)
     end
-    return window[side]
   end
-  return addon.db.bars[spot][side]
+end
+
+-- Windows are saved by name, so one called Guild has the same bars on every character and chat addon.
+function addon.GetBar(spot, side)
+  if type(spot) ~= "number" then return addon.db.bars[spot][side] end
+  local name = addon.SpotName(spot)
+  if not name or name == "" then return copy(WINDOW_DEFAULT)[side] end
+  local window = addon.db.windows[name]
+  if not window then
+    window = oldWindow(name) or copy(WINDOW_DEFAULT)
+    addon.db.windows[name] = window
+  end
+  return window[side]
 end
 
 local function barChanged(spot, side)
@@ -176,10 +193,10 @@ events:SetScript("OnEvent", function(self, _, name)
   if name ~= addonName then return end
   self:UnregisterEvent("ADDON_LOADED")
   StatholmeDB = clean(StatholmeDB, DEFAULTS)
-  StatholmeCharDB = clean(StatholmeCharDB, { chat = {} })
-  for index, window in pairs(StatholmeCharDB.chat) do
-    StatholmeCharDB.chat[index] = type(index) == "number" and clean(window, WINDOW_DEFAULT) or nil
+  local windows = StatholmeDB.windows
+  for name, window in pairs(windows) do
+    windows[name] = type(name) == "string" and name ~= "" and clean(window, WINDOW_DEFAULT) or nil
   end
-  addon.db, addon.charDB = StatholmeDB, StatholmeCharDB
+  addon.db = StatholmeDB
   for _, listener in ipairs(loadListeners) do listener() end
 end)

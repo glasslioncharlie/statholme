@@ -1,11 +1,12 @@
 local _, addon = ...
 
-local MAX_WINDOWS = Constants.ChatFrameConstants.MaxChatWindows
 local MINIMAP_GAP = 2
-local CHAT_TOP, CHAT_BOTTOM = 26, 2
 local MICRO_TOP, MICRO_BOTTOM = 2, 2
+-- The first one running wins; Blizzard's chat is the fallback.
+local CHAT_HOSTS = { "chattynator", "blizzard" }
 
 local spots = {}
+local chat
 local openWindows = ""
 local windowListeners = {}
 
@@ -13,9 +14,14 @@ function addon.OnWindowsChanged(listener)
   table.insert(windowListeners, listener)
 end
 
-local function attach(bar, frame, top, bottom)
+-- A covering bar keeps its usual height, centred on the frame and inset from its sides.
+local function attach(bar, frame, top, bottom, inset)
+  bar.anchor, bar.inset = frame, inset
   bar:ClearAllPoints()
-  if bar.side == "top" then
+  if inset then
+    bar:SetPoint("LEFT", frame, "LEFT", inset, 0)
+    bar:SetPoint("RIGHT", frame, "RIGHT", -inset, 0)
+  elseif bar.side == "top" then
     bar:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, top)
     bar:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 0, top)
   else
@@ -24,13 +30,23 @@ local function attach(bar, frame, top, bottom)
   end
 end
 
-local function addSpot(spot, count, frame, top, bottom)
-  local pair = {}
-  for _, side in ipairs({ "top", "bottom" }) do
-    pair[side] = addon.CreateBar(spot, side, count)
-    attach(pair[side], frame, top, bottom)
+local function addSpot(spot)
+  local count = addon.SLOT_COUNTS[spot] or addon.SLOT_COUNTS.window
+  spots[spot] = { top = addon.CreateBar(spot, "top", count), bottom = addon.CreateBar(spot, "bottom", count) }
+end
+
+local function attachSpot(spot, frame, top, bottom)
+  for _, bar in pairs(spots[spot]) do attach(bar, frame, top, bottom) end
+end
+
+-- Chat addons can hand a window to a different frame, e.g. after closing another window.
+local function chatBars(spot)
+  if not spots[spot] then addSpot(spot) end
+  for side, bar in pairs(spots[spot]) do
+    local frame, inset = chat.Frame(spot, side)
+    if frame and (bar.anchor ~= frame or bar.inset ~= inset) then attach(bar, frame, chat.top, chat.bottom, inset) end
   end
-  spots[spot] = pair
+  return spots[spot]
 end
 
 local function edges(frame)
@@ -60,27 +76,29 @@ local function updateMicro()
   setAvailable("micro", MicroMenuContainer:IsVisible())
 end
 
+local function isChatSpot(spot)
+  return spot == "chat" or type(spot) == "number"
+end
+
 local function updateChat()
-  setAvailable("chat", GeneralDockManager:IsVisible())
-  for index = 2, MAX_WINDOWS do
-    local frame = _G["ChatFrame" .. index]
-    setAvailable(index, frame:IsVisible() and not frame.isDocked)
+  local windows = chat.OpenWindows()
+  for _, index in ipairs(windows) do chatBars(index) end
+  for spot in pairs(spots) do
+    if isChatSpot(spot) then
+      chatBars(spot)
+      setAvailable(spot, chat.IsAvailable(spot))
+    end
   end
   -- Chat frames show and hide on every tab switch.
-  local open = table.concat(addon.OpenWindows(), ",")
+  local open = table.concat(windows, ",")
   if open ~= openWindows then
     openWindows = open
     for _, listener in ipairs(windowListeners) do listener() end
   end
 end
 
-local function chatSpot(frame)
-  if frame == ChatFrame1 or frame.isDocked then return "chat" end
-  return frame:GetID()
-end
-
-local function setTyping(editBox, typing)
-  local bar = spots[chatSpot(editBox.chatFrame)].bottom
+local function setTyping(spot, side, typing)
+  local bar = chatBars(spot)[side]
   bar.typing = typing
   bar:Update()
 end
@@ -89,46 +107,37 @@ function addon.SpotName(spot)
   if spot == "minimap" then return "Minimap" end
   if spot == "chat" then return "Main chat" end
   if spot == "micro" then return "Micro menu" end
-  return (FCF_GetChatWindowInfo(spot))
+  return chat.WindowName(spot)
 end
 
 function addon.OpenWindows()
-  local open = {}
-  for index = 2, MAX_WINDOWS do
-    local frame = _G["ChatFrame" .. index]
-    if frame:IsShown() and not frame.isDocked then table.insert(open, index) end
-  end
-  return open
+  return chat.OpenWindows()
 end
 
 addon.OnLoad(function()
-  addSpot("minimap", addon.SLOT_COUNTS.minimap, Minimap, 0, 0)
-  addSpot("micro", addon.SLOT_COUNTS.micro, MicroMenuContainer, MICRO_TOP, MICRO_BOTTOM)
-  addSpot("chat", addon.SLOT_COUNTS.chat, ChatFrame1.Background, CHAT_TOP, CHAT_BOTTOM)
-  for index = 2, MAX_WINDOWS do
-    addSpot(index, addon.SLOT_COUNTS.window, _G["ChatFrame" .. index].Background, CHAT_TOP, CHAT_BOTTOM)
+  for _, name in ipairs(CHAT_HOSTS) do
+    chat = addon.chatHosts[name]
+    if chat.IsActive() then break end
   end
+
+  addSpot("minimap")
+  attachSpot("minimap", Minimap, 0, 0)
+  addSpot("micro")
+  attachSpot("micro", MicroMenuContainer, MICRO_TOP, MICRO_BOTTOM)
+  chatBars("chat")
 
   Minimap:HookScript("OnShow", updateMinimap)
   Minimap:HookScript("OnHide", updateMinimap)
   MicroMenuContainer:HookScript("OnShow", updateMicro)
   MicroMenuContainer:HookScript("OnHide", updateMicro)
-  GeneralDockManager:HookScript("OnShow", updateChat)
-  GeneralDockManager:HookScript("OnHide", updateChat)
-  for index = 1, MAX_WINDOWS do
-    local frame = _G["ChatFrame" .. index]
-    frame:HookScript("OnShow", updateChat)
-    frame:HookScript("OnHide", updateChat)
-    frame.editBox:HookScript("OnEditFocusGained", function(editBox) setTyping(editBox, true) end)
-    frame.editBox:HookScript("OnEditFocusLost", function(editBox) setTyping(editBox, false) end)
-  end
-  hooksecurefunc("FCF_DockFrame", updateChat)
-  hooksecurefunc("FCF_UnDockFrame", updateChat)
-  hooksecurefunc("FCF_Close", updateChat)
+  chat.Watch(updateChat, setTyping)
   hooksecurefunc(MinimapCluster, "SetHeaderUnderneath", placeMinimapBars)
   EventRegistry:RegisterCallback("EditMode.Exit", placeMinimapBars, addon)
 
-  addon.OnBarChanged(function(spot, side) spots[spot][side]:Update() end)
+  -- Window bars are only made once their window first opens.
+  addon.OnBarChanged(function(spot, side)
+    if spots[spot] then spots[spot][side]:Update() end
+  end)
 
   local events = CreateFrame("Frame")
   events:RegisterEvent("PLAYER_ENTERING_WORLD")
