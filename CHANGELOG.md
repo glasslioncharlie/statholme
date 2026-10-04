@@ -1,5 +1,9 @@
 # Statholme
 
+## 0.2.1
+
+- Fixed an error from the Friends readout when logging in a character before its friends list had loaded.
+
 ## 0.2.0
 
 - Bars on extra chat windows are now saved account-wide by window name, so a window called Guild has the same bars on every character. Your existing window settings carry over the first time each window shows up.

@@ -1,7 +1,7 @@
 ## Interface: 16001, 120100
 ## Title: Statholme
 ## Notes: Lightweight datatext bars for the default UI and Chattynator, with clickable readouts.
-## Version: 0.2.0
+## Version: 0.2.1
 ## X-License: GPL-3.0-or-later
 ## SavedVariables: StatholmeDB
 ## SavedVariablesPerCharacter: StatholmeCharDB

@@ -10,9 +10,10 @@ local function classColored(text, classFile)
   return C_ClassColor.GetClassColor(classFile):WrapTextInColorCode(text)
 end
 
+-- Both counts are nil until the server sends the friends list, e.g. just after logging in a new character.
 local function addWowFriends(tooltip)
   local any = false
-  for index = 1, C_FriendList.GetNumFriends() do
+  for index = 1, C_FriendList.GetNumFriends() or 0 do
     local info = C_FriendList.GetFriendInfoByIndex(index)
     if info.connected then
       if not any then
@@ -57,7 +58,7 @@ addon.RegisterReadout("friends", {
   OnEnable = C_FriendList.ShowFriends,
   Update = function()
     local _, battleNetOnline = BNGetNumFriends()
-    return Format.Label("Friends", C_FriendList.GetNumOnlineFriends() + battleNetOnline)
+    return Format.Label("Friends", (C_FriendList.GetNumOnlineFriends() or 0) + battleNetOnline)
   end,
   OnTooltipShow = function(tooltip)
     tooltip:SetText("Friends online")
