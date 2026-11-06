@@ -1,5 +1,9 @@
 # Statholme
 
+## 1.0.0
+
+- Promoted to the live WoW Forever client. The Midnight client is no longer officially supported.
+
 ## 0.2.1
 
 - Fixed an error from the Friends readout when logging in a character before its friends list had loaded.
